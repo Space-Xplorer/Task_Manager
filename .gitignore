@@ -1,0 +1,16 @@
+# Backend
+backend/node_modules/
+backend/.env
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/.env
+mobile/dist/
+
+# General
+.DS_Store
+*.log
+
+
+task_manager_lld.md
