@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/authStore';
 import { useTasks } from '@/hooks/useTasks';
 import { getAvatarUrl } from '@/lib/avatar';
+import { apiLogout } from '@/api/endpoints';
+import { getTokens } from '@/lib/tokens';
 
 export default function ProfileScreen() {
   const user   = useAuthStore((s) => s.user);
@@ -18,7 +20,7 @@ export default function ProfileScreen() {
   const isAdmin   = user.role === 'admin';
   const avatarUrl = getAvatarUrl(user, 120);
 
-  // Personal task stats (tasks assigned to this user)
+  // Tasks assigned to this user
   const myTasks     = tasks?.filter((t) => {
     const raw = Array.isArray(t.assignedTo) ? t.assignedTo : [t.assignedTo];
     return raw.some((a) => (typeof a === 'object' ? a._id : String(a)) === user.id);
@@ -26,7 +28,7 @@ export default function ProfileScreen() {
   const myActive    = myTasks.filter((t) => t.status !== 'completed').length;
   const myCompleted = myTasks.filter((t) => t.status === 'completed').length;
 
-  // Admin-only: overall stats
+  // Admin-only overall stats
   const allTasks      = tasks ?? [];
   const allPending    = allTasks.filter((t) => t.status === 'pending').length;
   const allInProgress = allTasks.filter((t) => t.status === 'in_progress').length;
@@ -38,7 +40,18 @@ export default function ProfileScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            // Blacklist refresh token on server (best-effort — still log out locally on failure)
+            try {
+              const { refreshToken } = await getTokens();
+              if (refreshToken) await apiLogout(refreshToken);
+            } catch { /* silent — network may be down */ }
+            logout();
+          },
+        },
       ],
     );
   };
@@ -68,9 +81,9 @@ export default function ProfileScreen() {
         {/* ── My task stats ─────────────────────────────────── */}
         <Text style={styles.sectionLabel}>My Tasks</Text>
         <View style={styles.statsRow}>
-          <StatCard label="Total"     value={myTasks.length} color="#6B7280" bg="#F9FAFB" />
-          <StatCard label="Active"    value={myActive}       color="#2563EB" bg="#EFF6FF" />
-          <StatCard label="Done"      value={myCompleted}    color="#15803D" bg="#F0FDF4" />
+          <StatCard label="Total"  value={myTasks.length} color="#6B7280" bg="#F9FAFB" />
+          <StatCard label="Active" value={myActive}       color="#2563EB" bg="#EFF6FF" />
+          <StatCard label="Done"   value={myCompleted}    color="#15803D" bg="#F0FDF4" />
         </View>
 
         {/* ── Admin-only: all tasks overview ────────────────── */}
@@ -96,18 +109,14 @@ export default function ProfileScreen() {
   );
 }
 
-const StatCard = ({
-  label, value, color, bg,
-}: { label: string; value: number; color: string; bg: string }) => (
+const StatCard = ({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) => (
   <View style={[styles.statCard, { backgroundColor: bg }]}>
     <Text style={[styles.statValue, { color }]}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
-const AdminStatCard = ({
-  label, value, color, bg,
-}: { label: string; value: number; color: string; bg: string }) => (
+const AdminStatCard = ({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) => (
   <View style={[styles.adminStatCard, { backgroundColor: bg }]}>
     <Text style={[styles.adminStatValue, { color }]}>{value}</Text>
     <Text style={styles.adminStatLabel}>{label}</Text>
@@ -120,27 +129,20 @@ const styles = StyleSheet.create({
 
   heroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
+    borderRadius: 20, padding: 28, alignItems: 'center', gap: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 16, elevation: 3,
   },
   avatarRing: {
     width: 108, height: 108, borderRadius: 54,
     backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
   },
-  avatar: { width: 96, height: 96, borderRadius: 48 },
-  name:  { fontSize: 22, fontWeight: '700', color: '#111827', letterSpacing: -0.3 },
-  email: { fontSize: 14, color: '#6B7280', fontWeight: '400', marginBottom: 4 },
+  avatar:         { width: 96, height: 96, borderRadius: 48 },
+  name:           { fontSize: 22, fontWeight: '700', color: '#111827', letterSpacing: -0.3 },
+  email:          { fontSize: 14, color: '#6B7280', fontWeight: '400', marginBottom: 4 },
   roleBadge:      { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 5, marginTop: 4 },
   roleBadgeAdmin: { backgroundColor: '#FEF3C7' },
   roleBadgeUser:  { backgroundColor: '#EFF6FF' },
@@ -149,40 +151,20 @@ const styles = StyleSheet.create({
   roleTextUser:   { color: '#2563EB' },
 
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: -8,
+    fontSize: 12, fontWeight: '700', color: '#9CA3AF',
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: -8,
   },
 
-  statsRow: { flexDirection: 'row', gap: 10 },
-  statCard: { flex: 1, borderRadius: 14, padding: 16, alignItems: 'center', gap: 4 },
+  statsRow:  { flexDirection: 'row', gap: 10 },
+  statCard:  { flex: 1, borderRadius: 14, padding: 16, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 24, fontWeight: '700' },
   statLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600' },
 
-  adminStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  adminStatCard: {
-    width: '47%',
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
+  adminStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  adminStatCard:  { width: '47%', borderRadius: 14, padding: 16, alignItems: 'center', gap: 4 },
   adminStatValue: { fontSize: 28, fontWeight: '700' },
   adminStatLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
 
-  logoutBtn: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 4,
-  },
+  logoutBtn:  { backgroundColor: '#FEF2F2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   logoutText: { fontSize: 15, fontWeight: '700', color: '#EF4444' },
 });
