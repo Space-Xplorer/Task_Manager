@@ -119,6 +119,15 @@ export default function AdminScreen() {
   };
 
   const handleDelete = (task: Task) => {
+    if (Platform.OS === 'web') {
+      const shouldDelete = typeof window !== 'undefined'
+        ? window.confirm(`Delete "${task.title}"?`)
+        : true;
+      if (!shouldDelete) return;
+      deleteMutation.mutate(task._id);
+      return;
+    }
+
     Alert.alert('Delete Task', `Delete "${task.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(task._id) },

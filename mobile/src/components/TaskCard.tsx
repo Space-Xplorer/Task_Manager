@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, Pressable,
-  PanResponder, Animated, Alert,
+  PanResponder, Animated, Alert, TouchableOpacity, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Task } from '@/api/endpoints';
@@ -203,16 +203,30 @@ export const TaskCard = React.memo(function TaskCard({
         {isAdminCard && (
           <View style={styles.adminRow}>
             {onEdit && (
-              <Pressable style={styles.editBtn} onPress={() => onEdit(task)}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                activeOpacity={0.8}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onEdit(task);
+                }}
+              >
                 <Feather name="edit-2" size={12} color={C.TEXT2} />
                 <Text style={styles.editBtnText}>Edit</Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
             {onDelete && (
-              <Pressable style={styles.deleteBtn} onPress={() => onDelete(task)}>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                activeOpacity={0.8}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onDelete(task);
+                }}
+              >
                 <Feather name="trash-2" size={12} color={C.DANGER} />
                 <Text style={styles.deleteBtnText}>Delete</Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
           </View>
         )}
