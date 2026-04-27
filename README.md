@@ -1,12 +1,67 @@
-# Task Manager — Setup & Run Guide
+# Task Manager
 
-## Quick Start Checklist
+Task Manager is a full-stack product-team task management app with a Node/Express backend, MongoDB persistence, and an Expo mobile/web frontend.
 
-1. **Fill in backend `.env`** with your MongoDB URI and JWT secrets
-2. **Run the seed script** to create the admin account
-3. **Start the backend**
-4. **Set `EXPO_PUBLIC_API_URL`** in `mobile/.env`
-5. **Start Expo**
+## Setup Steps
+
+### Backend
+
+1. Fill in `backend/.env` with your MongoDB URI and JWT secrets.
+2. Run the seed script to create the admin account:
+
+```bash
+cd backend
+npm run seed
+```
+
+3. Start the backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+### Mobile
+
+1. Set `EXPO_PUBLIC_API_URL` in `mobile/.env` to your deployed backend URL for web/prod or your local API for development.
+2. Start Expo:
+
+```bash
+cd mobile
+npm start
+```
+
+3. For web testing, use:
+
+```bash
+npm run web
+```
+
+---
+
+## Seeded Demo Data
+
+To populate a product-development team dataset, run:
+
+```bash
+cd backend
+npm run seed:product
+```
+
+This creates a realistic product team, sample sprint tasks, and stable demo credentials for testing.
+
+---
+
+## Implemented Features
+
+- Authentication with register, login, refresh, and logout flows.
+- Role-based access for admin and regular team members.
+- Task list, task detail view, status updates, create, edit, and delete actions.
+- Admin panel for task management and assignment.
+- Profile screen with per-user task statistics and sign-out.
+- Auto-hydrated auth session with refresh-token rotation.
+- SSE-based live updates for task changes.
+- Web and mobile support through Expo Router.
 
 ---
 
@@ -40,6 +95,8 @@ This creates:
 - Password: `Admin@123`
 
 Change these in `.env` before running: `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`.
+
+If you want a fuller team dataset, use `npm run seed:product` from the backend folder.
 
 ### 3. Start the Backend
 
@@ -79,6 +136,8 @@ npm start
 ```
 
 Scan the QR code with **Expo Go** on your phone.
+
+For a shareable browser link, deploy the frontend web build to Vercel and point `EXPO_PUBLIC_API_URL` at the deployed backend.
 
 ---
 
