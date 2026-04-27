@@ -31,9 +31,10 @@ const saveRefreshToken = async (userId, token) => {
 // ─── Public service methods ───────────────────────────────────────────────────
 
 export const registerUser = async ({ name, email, password }) => {
+  const normalizedEmail = email.trim().toLowerCase();
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   // Role is always 'user' — admin is seeded separately
-  const user = await User.create({ name, email, passwordHash, role: 'user' });
+  const user = await User.create({ name, email: normalizedEmail, passwordHash, role: 'user' });
   const tokens = generateTokens(user);
   await saveRefreshToken(user._id, tokens.refreshToken);
   return {
@@ -43,7 +44,8 @@ export const registerUser = async ({ name, email, password }) => {
 };
 
 export const loginUser = async ({ email, password }) => {
-  const user = await User.findOne({ email });
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401, code: 'INVALID_CREDENTIALS' });
 
   const valid = await user.comparePassword(password);
@@ -74,7 +76,10 @@ export const rotateRefreshToken = async (oldToken) => {
   // Atomic rotation: delete old, save new
   await RefreshToken.deleteOne({ _id: doc._id });
   await saveRefreshToken(user._id, tokens.refreshToken);
-  return tokens;
+  return {
+    user: { id: String(user._id), name: user.name, email: user.email, role: user.role },
+    ...tokens,
+  };
 };
 
 export const logoutUser = async (userId, refreshToken) => {

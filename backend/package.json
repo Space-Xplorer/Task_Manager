@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "seed:product": "node scripts/seedProductTeam.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

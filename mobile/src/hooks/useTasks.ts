@@ -13,7 +13,8 @@ export const useTasks = (statusFilter?: string) =>
   useQuery({
     queryKey: [...TASKS_KEY, statusFilter],
     queryFn:  () => getTasks(statusFilter),
-    staleTime: 1000 * 60, // 1 min — SSE handles live updates
+    staleTime: 10_000,
+    refetchInterval: 8_000, // poll every 8s (Vercel-compatible, replaces SSE)
   });
 
 export const useUpdateStatus = () => {

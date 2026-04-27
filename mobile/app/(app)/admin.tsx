@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/authStore';
 import { useAdminStore } from '@/stores/adminStore';
 import { useTasks, useCreateTask, useDeleteTask, useEditTask, useUpdateStatus } from '@/hooks/useTasks';
@@ -13,6 +14,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { TaskCard } from '@/components/TaskCard';
 import { EmptyState } from '@/components/EmptyState';
 import { Task } from '@/api/endpoints';
+import { C, shadow } from '@/lib/theme';
 
 export default function AdminScreen() {
   const router = useRouter();
@@ -76,7 +78,7 @@ export default function AdminScreen() {
   };
 
   const userNames = (ids: string[]) =>
-    users?.filter(u => ids.includes(u._id)).map(u => u.name).join(', ') || 'Select users';
+    users?.filter(u => ids.includes(u._id)).map(u => u.name).join(', ') || 'Select team members';
 
   const parseDeadline = (s: string): string | null => {
     if (!s.trim()) return null;
@@ -128,23 +130,28 @@ export default function AdminScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, styles.center]} edges={['top']}>
-        <ActivityIndicator color="#10B981" size="large" />
+        <ActivityIndicator color={C.PRIMARY} size="large" />
       </SafeAreaView>
     );
   }
 
-  // ─── User picker sub-modal ─────────────────────────────────────────────────
+  // ─── User picker modal ─────────────────────────────────────────────────────
   const UserPickerModal = ({
     visible, onClose, selected, setSelected,
   }: { visible: boolean; onClose: () => void; selected: string[]; setSelected: (v: string[]) => void }) => (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select Users</Text>
+        <View style={[styles.modalContent, { maxHeight: '60%' }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Members</Text>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+              <Feather name="x" size={18} color={C.TEXT2} />
+            </TouchableOpacity>
+          </View>
           {usersLoading
-            ? <ActivityIndicator color="#10B981" />
+            ? <ActivityIndicator color={C.PRIMARY} style={{ marginVertical: 24 }} />
             : (
-              <ScrollView>
+              <ScrollView showsVerticalScrollIndicator={false}>
                 {(users ?? []).map((u) => {
                   const isSel = selected.includes(u._id);
                   return (
@@ -152,13 +159,14 @@ export default function AdminScreen() {
                       key={u._id}
                       style={[styles.userRow, isSel && styles.userRowSel]}
                       onPress={() => toggleUser(u._id, selected, setSelected)}
+                      activeOpacity={0.7}
                     >
-                      <View>
+                      <View style={styles.userInfo}>
                         <Text style={styles.userName}>{u.name}</Text>
                         <Text style={styles.userEmail}>{u.email}</Text>
                       </View>
-                      <View style={styles.checkbox}>
-                        {isSel && <View style={styles.checkboxInner} />}
+                      <View style={[styles.checkbox, isSel && styles.checkboxActive]}>
+                        {isSel && <Feather name="check" size={12} color="#FFFFFF" />}
                       </View>
                     </TouchableOpacity>
                   );
@@ -167,7 +175,7 @@ export default function AdminScreen() {
             )
           }
           <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
-            <Text style={styles.confirmText}>Done</Text>
+            <Text style={styles.confirmText}>Done  ({selected.length} selected)</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -177,7 +185,13 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Admin</Text>
+        <View>
+          <Text style={styles.heading}>All Tasks.</Text>
+          <Text style={styles.subheading}>ADMIN PANEL</Text>
+        </View>
+        <View style={styles.countPill}>
+          <Text style={styles.countPillText}>{tasks?.length ?? 0} total</Text>
+        </View>
       </View>
 
       <FlatList
@@ -192,37 +206,75 @@ export default function AdminScreen() {
             onDelete={handleDelete}
           />
         )}
-        ListEmptyComponent={<EmptyState message="No tasks yet. Tap + to create one." />}
+        ListEmptyComponent={
+          <EmptyState
+            message="No tasks yet."
+            sub="Tap + to create the first task."
+          />
+        }
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isLoading}
             onRefresh={refetch}
-            tintColor="#10B981"
+            tintColor={C.PRIMARY}
           />
         }
       />
 
-      {/* ── Create Task Modal ─────────────────────────────────────────────── */}
+      {/* ── Create Task Modal ──────────────────────────────────────────────── */}
       <Modal visible={createVisible} transparent animationType="slide" onRequestClose={closeCreateModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>New Task</Text>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>New Task.</Text>
+                <Text style={styles.modalSub}>ASSIGN A DELIVERABLE</Text>
+              </View>
+              <TouchableOpacity onPress={closeCreateModal} style={styles.modalCloseBtn}>
+                <Feather name="x" size={18} color={C.TEXT2} />
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.label}>Title *</Text>
-            <TextInput style={styles.input} placeholder="Task title" placeholderTextColor="#9CA3AF" value={cTitle} onChangeText={setCTitle} />
+            <Text style={styles.label}>TASK TITLE *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Update landing page copy"
+              placeholderTextColor={C.TEXT3}
+              value={cTitle}
+              onChangeText={setCTitle}
+            />
 
-            <Text style={styles.label}>Description</Text>
-            <TextInput style={[styles.input, styles.textarea]} placeholder="Optional description" placeholderTextColor="#9CA3AF" value={cDesc} onChangeText={setCDesc} multiline numberOfLines={3} />
+            <Text style={[styles.label, { marginTop: 14 }]}>DESCRIPTION</Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              placeholder="Add any context or notes..."
+              placeholderTextColor={C.TEXT3}
+              value={cDesc}
+              onChangeText={setCDesc}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
 
-            <Text style={styles.label}>Deadline (YYYY-MM-DD)</Text>
-            <TextInput style={styles.input} placeholder="e.g. 2025-12-31" placeholderTextColor="#9CA3AF" value={cDeadline} onChangeText={setCDeadline} keyboardType="numbers-and-punctuation" />
+            <Text style={[styles.label, { marginTop: 14 }]}>DEADLINE</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD  (optional)"
+              placeholderTextColor={C.TEXT3}
+              value={cDeadline}
+              onChangeText={setCDeadline}
+              keyboardType="numbers-and-punctuation"
+            />
 
-            <Text style={styles.label}>Assign To *</Text>
-            <TouchableOpacity style={styles.picker} onPress={() => setCPicker(true)}>
-              <Text style={{ color: cUsers.length > 0 ? '#111827' : '#9CA3AF' }} numberOfLines={1}>
+            <Text style={[styles.label, { marginTop: 14 }]}>ASSIGN TO *</Text>
+            <TouchableOpacity style={styles.picker} onPress={() => setCPicker(true)} activeOpacity={0.7}>
+              <Feather name="users" size={15} color={C.TEXT3} />
+              <Text style={[styles.pickerText, { color: cUsers.length > 0 ? C.TEXT : C.TEXT3 }]} numberOfLines={1}>
                 {userNames(cUsers)}
               </Text>
+              <Feather name="chevron-down" size={15} color={C.TEXT3} />
             </TouchableOpacity>
 
             <UserPickerModal visible={cPicker} onClose={() => setCPicker(false)} selected={cUsers} setSelected={setCUsers} />
@@ -237,34 +289,66 @@ export default function AdminScreen() {
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.confirmText}>Create</Text>}
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.confirmText}>Create Task</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* ── Edit Task Modal ───────────────────────────────────────────────── */}
+      {/* ── Edit Task Modal ────────────────────────────────────────────────── */}
       <Modal visible={editVisible} transparent animationType="slide" onRequestClose={closeEditModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Task</Text>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Edit Task.</Text>
+                <Text style={styles.modalSub}>UPDATE DELIVERABLE</Text>
+              </View>
+              <TouchableOpacity onPress={closeEditModal} style={styles.modalCloseBtn}>
+                <Feather name="x" size={18} color={C.TEXT2} />
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.label}>Title *</Text>
-            <TextInput style={styles.input} placeholder="Task title" placeholderTextColor="#9CA3AF" value={eTitle} onChangeText={setETitle} />
+            <Text style={styles.label}>TASK TITLE *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Task title"
+              placeholderTextColor={C.TEXT3}
+              value={eTitle}
+              onChangeText={setETitle}
+            />
 
-            <Text style={styles.label}>Description</Text>
-            <TextInput style={[styles.input, styles.textarea]} placeholder="Optional description" placeholderTextColor="#9CA3AF" value={eDesc} onChangeText={setEDesc} multiline numberOfLines={3} />
+            <Text style={[styles.label, { marginTop: 14 }]}>DESCRIPTION</Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              placeholder="Add any context or notes..."
+              placeholderTextColor={C.TEXT3}
+              value={eDesc}
+              onChangeText={setEDesc}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
 
-            <Text style={styles.label}>Deadline (YYYY-MM-DD)</Text>
-            <TextInput style={styles.input} placeholder="e.g. 2025-12-31" placeholderTextColor="#9CA3AF" value={eDeadline} onChangeText={setEDeadline} keyboardType="numbers-and-punctuation" />
+            <Text style={[styles.label, { marginTop: 14 }]}>DEADLINE</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD  (optional)"
+              placeholderTextColor={C.TEXT3}
+              value={eDeadline}
+              onChangeText={setEDeadline}
+              keyboardType="numbers-and-punctuation"
+            />
 
-            <Text style={styles.label}>Assign To *</Text>
-            <TouchableOpacity style={styles.picker} onPress={() => setEPicker(true)}>
-              <Text style={{ color: eUsers.length > 0 ? '#111827' : '#9CA3AF' }} numberOfLines={1}>
+            <Text style={[styles.label, { marginTop: 14 }]}>ASSIGN TO *</Text>
+            <TouchableOpacity style={styles.picker} onPress={() => setEPicker(true)} activeOpacity={0.7}>
+              <Feather name="users" size={15} color={C.TEXT3} />
+              <Text style={[styles.pickerText, { color: eUsers.length > 0 ? C.TEXT : C.TEXT3 }]} numberOfLines={1}>
                 {userNames(eUsers)}
               </Text>
+              <Feather name="chevron-down" size={15} color={C.TEXT3} />
             </TouchableOpacity>
 
             <UserPickerModal visible={ePicker} onClose={() => setEPicker(false)} selected={eUsers} setSelected={setEUsers} />
@@ -279,8 +363,8 @@ export default function AdminScreen() {
                 disabled={editMutation.isPending}
               >
                 {editMutation.isPending
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.confirmText}>Save</Text>}
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.confirmText}>Save Changes</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -291,52 +375,125 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F5F0' },
+  container: { flex: 1, backgroundColor: C.BG },
   center:    { justifyContent: 'center', alignItems: 'center' },
 
   headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 20,
     paddingBottom: 8,
   },
   heading: {
-    fontSize: 28,
+    fontSize: 30,
+    fontWeight: '800',
+    color: C.TEXT,
+    letterSpacing: -0.8,
+  },
+  subheading: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#111827',
-    letterSpacing: -0.5,
+    color: C.TEXT3,
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  countPill: {
+    backgroundColor: C.PRIMARY_L,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  countPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.PRIMARY_D,
   },
 
-  list: { paddingHorizontal: 24, paddingBottom: 100, paddingTop: 8 },
+  list: { paddingHorizontal: 24, paddingBottom: 100, paddingTop: 12 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.SURFACE,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, gap: 8, maxHeight: '85%',
+    padding: 24,
+    gap: 4,
+    maxHeight: '90%',
   },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 8, letterSpacing: -0.3 },
-  label:      { fontSize: 13, color: '#6B7280', fontWeight: '600', marginTop: 6, marginBottom: 2 },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: C.TEXT, letterSpacing: -0.5 },
+  modalSub:   { fontSize: 11, fontWeight: '700', color: C.TEXT3, letterSpacing: 1, marginTop: 2 },
+  modalCloseBtn: {
+    width: 32, height: 32,
+    borderRadius: 16,
+    backgroundColor: C.SURFACE2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.TEXT3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
   input: {
-    backgroundColor: '#F9FAFB', borderRadius: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
-    color: '#111827', fontSize: 15,
-    paddingHorizontal: 14, paddingVertical: 13,
+    backgroundColor: C.BG,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.BORDER,
+    color: C.TEXT,
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
-  textarea: { height: 88, textAlignVertical: 'top' },
+  textarea: { height: 88 },
+
   picker: {
-    backgroundColor: '#F9FAFB', borderRadius: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 14, paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.BG,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  userRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#F9FAFB' },
-  userRowSel:   { backgroundColor: '#F0FDF4', paddingHorizontal: 10, borderRadius: 12, borderBottomWidth: 0, marginVertical: 2 },
-  userName:     { color: '#111827', fontSize: 15, fontWeight: '600' },
-  userEmail:    { color: '#9CA3AF', fontSize: 12, marginTop: 2 },
-  checkbox:     { width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center' },
-  checkboxInner:{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#1C2E1D' },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  cancelBtn:    { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: '#F9FAFB', alignItems: 'center' },
-  cancelText:   { color: '#374151', fontSize: 14, fontWeight: '600' },
-  confirmBtn:   { flex: 2, paddingVertical: 14, borderRadius: 14, backgroundColor: '#1C2E1D', alignItems: 'center' },
-  confirmText:  { color: '#fff', fontSize: 14, fontWeight: '600' },
+  pickerText: { flex: 1, fontSize: 15 },
+
+  userRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: C.BORDER2,
+  },
+  userRowSel:  { backgroundColor: C.PRIMARY_L, paddingHorizontal: 10, borderRadius: 12, borderBottomWidth: 0, marginVertical: 2 },
+  userInfo:    { flex: 1 },
+  userName:    { color: C.TEXT,  fontSize: 15, fontWeight: '600' },
+  userEmail:   { color: C.TEXT3, fontSize: 12, marginTop: 2 },
+  checkbox: {
+    width: 22, height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: C.BORDER,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxActive: { backgroundColor: C.PRIMARY, borderColor: C.PRIMARY },
+
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  cancelBtn:    { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: C.SURFACE2, alignItems: 'center' },
+  cancelText:   { color: C.TEXT2, fontSize: 14, fontWeight: '600' },
+  confirmBtn:   { flex: 2, paddingVertical: 14, borderRadius: 14, backgroundColor: C.PRIMARY, alignItems: 'center', ...shadow.sm },
+  confirmText:  { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

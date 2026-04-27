@@ -4,9 +4,11 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/authStore';
 import { apiRegister } from '@/api/endpoints';
+import { C, shadow } from '@/lib/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -15,26 +17,44 @@ export default function RegisterScreen() {
   const [name,     setName]     = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [showPwd,  setShowPwd]  = useState(false);
   const [loading,  setLoading]  = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMsg('Please fill in all fields.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setErrorMsg('Password must be at least 6 characters.');
       return;
     }
+    setErrorMsg(null);
     setLoading(true);
     try {
       const data = await apiRegister({ name: name.trim(), email: email.trim().toLowerCase(), password });
       await login(data.user, data.accessToken, data.refreshToken);
       router.replace('/(app)');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })
-        ?.response?.data?.error ?? 'Registration failed';
-      Alert.alert('Registration Failed', msg);
+      const response = (err as { response?: { status?: number; data?: { error?: string } } })?.response;
+
+      if (response?.status === 409) {
+        Alert.alert(
+          'Account Already Exists',
+          'This email is already registered. Please sign in instead or use a different email.',
+          [
+            { text: 'Use Different Email', style: 'cancel' },
+            { text: 'Go to Sign In', onPress: () => router.replace('/(auth)/login') },
+          ],
+        );
+        setErrorMsg('This email is already registered. Sign in instead or use a different email.');
+        return;
+      }
+
+      const msg = response?.data?.error ?? 'Registration failed';
+      setErrorMsg(msg);
+      if (Platform.OS !== 'web') Alert.alert('Registration Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -46,46 +66,73 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <View style={styles.logoBox} />
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join TaskManager today</Text>
+
+        {/* ── Brand ──────────────────────────────────────────────── */}
+        <View style={styles.brand}>
+          <View style={styles.logoBox}>
+            <Feather name="layers" size={28} color="#FFFFFF" />
+          </View>
+          <Text style={styles.title}>Create account.</Text>
+          <Text style={styles.subtitle}>Join your team's workspace</Text>
         </View>
 
+        {/* ── Form ───────────────────────────────────────────────── */}
         <View style={styles.form}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="John Doe"
-            placeholderTextColor="#8E9385"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            autoComplete="name"
-          />
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="you@example.com"
-            placeholderTextColor="#8E9385"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
+          <Text style={styles.label}>FULL NAME</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="user" size={16} color={C.TEXT3} />
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Priya Sharma"
+              placeholderTextColor={C.TEXT3}
+              value={name}
+              onChangeText={(t) => {
+                setName(t);
+                if (errorMsg) setErrorMsg(null);
+              }}
+              autoCapitalize="words"
+              autoComplete="name"
+            />
+          </View>
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Min. 6 characters"
-            placeholderTextColor="#8E9385"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-          />
+          <Text style={[styles.label, { marginTop: 16 }]}>EMAIL ADDRESS</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="mail" size={16} color={C.TEXT3} />
+            <TextInput
+              style={styles.input}
+              placeholder="you@example.com"
+              placeholderTextColor={C.TEXT3}
+              value={email}
+              onChangeText={(t) => {
+                setEmail(t);
+                if (errorMsg) setErrorMsg(null);
+              }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+          </View>
+
+          <Text style={[styles.label, { marginTop: 16 }]}>PASSWORD</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="lock" size={16} color={C.TEXT3} />
+            <TextInput
+              style={styles.input}
+              placeholder="Min. 6 characters"
+              placeholderTextColor={C.TEXT3}
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                if (errorMsg) setErrorMsg(null);
+              }}
+              secureTextEntry={!showPwd}
+              autoComplete="new-password"
+            />
+            <TouchableOpacity onPress={() => setShowPwd((p) => !p)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name={showPwd ? 'eye-off' : 'eye'} size={16} color={C.TEXT3} />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
@@ -99,45 +146,79 @@ export default function RegisterScreen() {
             }
           </TouchableOpacity>
 
+          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <Link href="/(auth)/login" style={styles.link}>Sign In</Link>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Text style={styles.link}>Sign In</Text>
+            </TouchableOpacity>
           </View>
         </View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F5F0' },
+  container: { flex: 1, backgroundColor: C.BG },
   inner:     { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  header:    { alignItems: 'center', marginBottom: 40 },
-  logoBox:   { width: 64, height: 64, backgroundColor: '#1C2E1D', borderRadius: 16, marginBottom: 20 },
-  title:     { fontSize: 32, fontWeight: '800', color: '#1C2E1D', letterSpacing: -1 },
-  subtitle:  { fontSize: 16, color: '#5C6C52', marginTop: 8, fontWeight: '500' },
-  form:      { gap: 8 },
-  label:     { fontSize: 13, color: '#5C6C52', fontWeight: '600', marginTop: 12, marginBottom: 4 },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    color: '#1C2E1D',
-    fontSize: 15,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+
+  brand: { alignItems: 'center', marginBottom: 48 },
+  logoBox: {
+    width: 72, height: 72,
+    borderRadius: 22,
+    backgroundColor: C.PRIMARY,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 24,
+    ...shadow.md,
   },
+  title:    { fontSize: 30, fontWeight: '800', color: C.TEXT, letterSpacing: -0.8 },
+  subtitle: { fontSize: 15, color: C.TEXT2, marginTop: 6, fontWeight: '400' },
+
+  form: { gap: 4 },
+
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.TEXT3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.SURFACE,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.BORDER,
+    paddingHorizontal: 14,
+    ...shadow.sm,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 15,
+    color: C.TEXT,
+  },
+
   btn: {
-    backgroundColor: '#1C2E1D',
-    borderRadius: 16,
+    backgroundColor: C.PRIMARY,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 28,
+    ...shadow.md,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText:     { color: '#fff', fontSize: 16, fontWeight: '700' },
-  footer:      { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
-  footerText:  { color: '#5C6C52', fontSize: 14, fontWeight: '500' },
-  link:        { color: '#1C2E1D', fontSize: 14, fontWeight: '700' },
+  btnText:     { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  errorText:   { color: C.DANGER, marginTop: 12, fontSize: 13, fontWeight: '500' },
+
+  footer:     { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+  footerText: { color: C.TEXT2, fontSize: 14, fontWeight: '400' },
+  link:       { color: C.PRIMARY, fontSize: 14, fontWeight: '700' },
 });

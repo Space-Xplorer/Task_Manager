@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { saveTokens, clearTokens } from '@/lib/tokens';
+import { queryClient } from '@/lib/queryClient';
+import { useSSEStore } from '@/stores/sseStore';
 
 export interface AuthUser {
   id:    string;
@@ -33,8 +35,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await clearTokens();
-    set({ user: null, accessToken: null, isAuthenticated: false });
+    try {
+      await clearTokens();
+    } finally {
+      queryClient.clear();
+      useSSEStore.getState().reset();
+      set({ user: null, accessToken: null, isAuthenticated: false, isHydrated: true });
+    }
   },
 
   setAccessToken: (token) => set({ accessToken: token }),

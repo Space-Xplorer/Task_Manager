@@ -1,18 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
+import { C, shadow } from '@/lib/theme';
 
 const SkeletonBlock = ({ w, h, style }: { w: number | string; h: number; style?: object }) => (
-  <View style={[{ width: w as any, height: h, backgroundColor: '#E5E7EB', borderRadius: 6 }, style]} />
+  <View style={[{ width: w as any, height: h, backgroundColor: '#E9EAEC', borderRadius: 6 }, style]} />
 );
 
 export const TaskSkeleton: React.FC = () => {
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const pulse = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1,   duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,   duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 800, useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -22,17 +23,19 @@ export const TaskSkeleton: React.FC = () => {
   return (
     <View style={styles.wrapper}>
       <Animated.View style={[styles.card, { opacity: pulse }]}>
+        {/* Status strip placeholder */}
+        <View style={styles.strip} />
         {/* Top row */}
         <View style={styles.topRow}>
-          <SkeletonBlock w={80} h={22} style={{ borderRadius: 11 }} />
-          <SkeletonBlock w={48} h={14} />
+          <SkeletonBlock w={84} h={22} style={{ borderRadius: 20 }} />
+          <SkeletonBlock w={44} h={13} style={{ borderRadius: 6 }} />
         </View>
         {/* Title */}
-        <SkeletonBlock w="85%" h={20} style={{ marginBottom: 6 }} />
-        <SkeletonBlock w="60%" h={20} style={{ marginBottom: 16 }} />
+        <SkeletonBlock w="82%" h={18} style={{ marginBottom: 6 }} />
+        <SkeletonBlock w="55%" h={18} style={{ marginBottom: 14 }} />
         {/* Description */}
-        <SkeletonBlock w="100%" h={13} style={{ marginBottom: 4 }} />
-        <SkeletonBlock w="75%"  h={13} style={{ marginBottom: 20 }} />
+        <SkeletonBlock w="100%" h={12} style={{ marginBottom: 5 }} />
+        <SkeletonBlock w="70%"  h={12} style={{ marginBottom: 20 }} />
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.avatarRow}>
@@ -40,7 +43,7 @@ export const TaskSkeleton: React.FC = () => {
               <View key={i} style={[styles.avatar, { marginLeft: i > 0 ? -10 : 0 }]} />
             ))}
           </View>
-          <SkeletonBlock w={50} h={13} />
+          <SkeletonBlock w={52} h={22} style={{ borderRadius: 20 }} />
         </View>
       </Animated.View>
     </View>
@@ -48,16 +51,20 @@ export const TaskSkeleton: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  wrapper: { marginHorizontal: 24, marginBottom: 20 },
+  wrapper: { marginHorizontal: 24, marginBottom: 16 },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
+    backgroundColor: C.SURFACE,
+    borderRadius: 20,
+    padding: 18,
+    paddingLeft: 22,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  strip: {
+    position: 'absolute',
+    left: 0, top: 0, bottom: 0,
+    width: 4,
+    backgroundColor: '#E9EAEC',
   },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -65,7 +72,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 28, height: 28,
     borderRadius: 14,
-    backgroundColor: '#E5E7EB',
-    borderWidth: 2, borderColor: '#FFFFFF',
+    backgroundColor: '#E9EAEC',
+    borderWidth: 2, borderColor: C.SURFACE,
   },
 });

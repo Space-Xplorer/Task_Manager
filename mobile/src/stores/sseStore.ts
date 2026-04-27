@@ -10,6 +10,7 @@ interface SSEState {
   highlightedIds:  Record<string, true>;
   highlightTask:   (id: string) => void;
   clearHighlight:  (id: string) => void;
+  reset:           () => void;
 }
 
 export const useSSEStore = create<SSEState>((set) => ({
@@ -26,4 +27,5 @@ export const useSSEStore = create<SSEState>((set) => ({
     delete next[id];
     return { highlightedIds: next };
   }),
+  reset: () => set({ connected: false, notification: null, highlightedIds: {} }),
 }));
